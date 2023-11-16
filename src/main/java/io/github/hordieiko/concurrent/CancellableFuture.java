@@ -10,13 +10,12 @@ import java.util.concurrent.Future;
  * allows for its proper completion.
  *
  * @param <V> the result type returned by this CancellableFuture's {@code get} method
- * @param <T> the cancellation reason type
- * @see io.github.hordieiko.concurrent.CancellableFutureTask
- * @see io.github.hordieiko.concurrent.CancellableThreadPoolExecutor
- * @see CancellableExecutorService
+ * @param <U> the cancellation reason type
  * @see CancellableTask
+ * @see CancellableExecutor
+ * @see CancellableExecutorService
  */
-public interface CancellableFuture<V, T extends CancellableTask.CancellationReason> extends Future<V> {
+public interface CancellableFuture<V, U extends CancellableTask.CancellationReason> extends Future<V> {
 
     /**
      * Attempts to cancel execution of this task.
@@ -34,5 +33,5 @@ public interface CancellableFuture<V, T extends CancellableTask.CancellationReas
      * then at least one of them returns {@code true}. Implementations
      * may provide stronger guarantees.
      */
-    boolean cancel(boolean mayInterruptIfRunning, T reason);
+    boolean cancel(boolean mayInterruptIfRunning, U reason);
 }

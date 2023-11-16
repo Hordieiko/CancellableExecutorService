@@ -11,16 +11,14 @@ import java.util.concurrent.RunnableFuture;
  * by the {@link CancellableFuture#cancel(boolean, CancellableTask.CancellationReason)} method.
  *
  * @param <V> The result type returned by this Future's {@code get} method
- * @param <T> the type parameter
+ * @param <U> the cancellation reason type
  * @see Executor
  * @see FutureTask
  * @see CancellableExecutorService
- * @see CancellableCompletionService
  * @see CancellableTimeoutCompletionService
  */
-sealed interface RunnableCancellableFuture<V, T extends CancellableTask.CancellationReason>
-        extends RunnableFuture<V>, CancellableFuture<V, T>
-        permits CancellableFutureTask {
+public interface RunnableCancellableFuture<V, U extends CancellableTask.CancellationReason>
+        extends RunnableFuture<V>, CancellableFuture<V, U> {
     /**
      * {@inheritDoc}
      */
@@ -38,5 +36,5 @@ sealed interface RunnableCancellableFuture<V, T extends CancellableTask.Cancella
      * @return
      */
     @Override
-    boolean cancel(boolean mayInterruptIfRunning, T reason);
+    boolean cancel(boolean mayInterruptIfRunning, U reason);
 }

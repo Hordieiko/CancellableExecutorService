@@ -1,31 +1,35 @@
 package io.github.hordieiko.concurrent;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
 /**
  * The {@link CancellableFutureTask} is a {@link FutureTask} extension
  * to support task cancellation with a possible {@link CancellableTask.CancellationReason reason}.
  *
- * @param <T> the cancellation reason type
  * @param <V> the result type returned by this Future's {@code get} methods
- * @param <C> the callable cancellable task
- * @param <R> the runnable cancellable task
  */
-non-sealed class CancellableFutureTask<V,
-        T extends CancellableTask.CancellationReason,
-        C extends Callable<V> & CancellableTask<T>,
-        R extends Runnable & CancellableTask<T>>
-        extends FutureTask<V>
-        implements RunnableCancellableFuture<V, T> {
-    private final CancellableTask<T> cancellableTask;
+sealed class CancellableFutureTask<V, U extends CancellableTask.CancellationReason> extends FutureTask<V>
+        implements RunnableCancellableFuture<V, U>
+        permits ObservableCancellableFutureTask {
+    private final CancellableTask<U> cancellableTask;
 
-    CancellableFutureTask(final C cancellableCallable) {
+    /**
+     * Instantiates a new Cancellable future task.
+     *
+     * @param cancellableCallable the cancellable callable
+     */
+    CancellableFutureTask(final CallableCancellableTask<V, U> cancellableCallable) {
         super(cancellableCallable);
         this.cancellableTask = cancellableCallable;
     }
 
-    CancellableFutureTask(final R cancellableRunnable, V value) {
+    /**
+     * Instantiates a new Cancellable future task.
+     *
+     * @param cancellableRunnable the cancellable runnable
+     * @param value               the value
+     */
+    CancellableFutureTask(final RunnableCancellableTask<U> cancellableRunnable, V value) {
         super(cancellableRunnable, value);
         this.cancellableTask = cancellableRunnable;
     }
@@ -37,12 +41,12 @@ non-sealed class CancellableFutureTask<V,
     }
 
     @Override
-    public boolean cancel(final boolean mayInterruptIfRunning, final T reason) {
+    public boolean cancel(final boolean mayInterruptIfRunning, final U reason) {
         cancelTask(reason);
         return super.cancel(mayInterruptIfRunning);
     }
 
-    private void cancelTask(final T reason) {
+    private void cancelTask(final U reason) {
         try {
             cancellableTask.cancel(reason);
         } catch (Exception ignore) {

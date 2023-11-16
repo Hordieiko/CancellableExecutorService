@@ -35,7 +35,6 @@ public interface CancellableTimeoutCompletionService<U extends CancellableTask.C
      * {@link Callable} form so they can be submitted.
      *
      * @param <V>                       the type of the task's result
-     * @param <C>                       the type or the submitted callable cancellable task
      * @param task                      the task to submit
      * @param timeout                   the time available to execute the {@code task}
      * @param timeoutCancellationReason the timeout cancellation reason
@@ -43,8 +42,7 @@ public interface CancellableTimeoutCompletionService<U extends CancellableTask.C
      * @throws RejectedExecutionException if the {@code task} cannot be scheduled for execution
      * @throws NullPointerException       if the {@code task} or {@code timeout} is null
      */
-    <V, C extends Callable<V> & CancellableTask<U>>
-    CancellableFuture<V, U> submit(C task, Duration timeout, U timeoutCancellationReason);
+    <V> CancellableFuture<V, U> submit(CallableCancellableTask<V, U> task, Duration timeout, U timeoutCancellationReason);
 
     /**
      * Submits a Runnable task for execution and returns a CancellableFuture
@@ -54,7 +52,6 @@ public interface CancellableTimeoutCompletionService<U extends CancellableTask.C
      * <p>If the task execution exceeds the given timeout, the consumed task will be terminated.
      *
      * @param <V>                       the type of the result
-     * @param <R>                       the type or the submitted runnable cancellable task
      * @param task                      the task to submit
      * @param result                    the result to return
      * @param timeout                   the time available to execute the {@code task}
@@ -63,6 +60,5 @@ public interface CancellableTimeoutCompletionService<U extends CancellableTask.C
      * @throws RejectedExecutionException if the {@code task} cannot be scheduled for execution
      * @throws NullPointerException       if the {@code task} or {@code timeout} is null
      */
-    <V, R extends Runnable & CancellableTask<U>>
-    CancellableFuture<V, U> submit(R task, V result, Duration timeout, U timeoutCancellationReason);
+    <V> CancellableFuture<V, U> submit(RunnableCancellableTask<U> task, V result, Duration timeout, U timeoutCancellationReason);
 }

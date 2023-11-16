@@ -7,7 +7,6 @@ import io.github.hordieiko.observer.ObserverManager;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -108,12 +107,10 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param timeout                   the time available to execute the {@code task}
      * @param timeoutCancellationReason the timeout cancellation reason
      * @param <V>                       the type of the task's result
-     * @param <C>                       the type or the submitted callable cancellable task
      * @return {@inheritDoc}
      */
     @Override
-    public <V, C extends Callable<V> & CancellableTask<U>>
-    CancellableFuture<V, U> submit(final C task, final Duration timeout, U timeoutCancellationReason) {
+    public <V> CancellableFuture<V, U> submit(final CallableCancellableTask<V, U> task, final Duration timeout, U timeoutCancellationReason) {
         final var runnableCancellableFutureTask = newTaskFor(task, timeout, timeoutCancellationReason, eventManager);
         executor.execute(runnableCancellableFutureTask);
         return runnableCancellableFutureTask;
@@ -127,12 +124,10 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param timeout                   the time available to execute the {@code task}
      * @param timeoutCancellationReason the timeout cancellation reason
      * @param <V>                       the type of the result
-     * @param <R>                       the type or the submitted runnable cancellable task
      * @return {@inheritDoc}
      */
     @Override
-    public <V, R extends Runnable & CancellableTask<U>>
-    CancellableFuture<V, U> submit(final R task, final V result, final Duration timeout, U timeoutCancellationReason) {
+    public <V> CancellableFuture<V, U> submit(final RunnableCancellableTask<U> task, final V result, final Duration timeout, U timeoutCancellationReason) {
         final var cancellableRunnableFutureTask = newTaskFor(task, result, timeout, timeoutCancellationReason, eventManager);
         executor.execute(cancellableRunnableFutureTask);
         return cancellableRunnableFutureTask;
@@ -145,20 +140,15 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param timeout                   the time available to execute the {@code task}
      * @param timeoutCancellationReason the timeout cancellation reason
      * @param <V>                       the type of the task's result
-     * @param <C>                       the type or the submitted callable cancellable task
-     * @param <T>                       the {@link Callable} that is {@link CancellableFuture}
      * @return a {@link  TimeoutCancellableTask} which, when run, will run the
      * underlying runnable and which, as a {@link CancellableFuture}, will yield
      * the given value as its result and provide for reasonable cancellation of
      * the underlying task and which, as a {@code timeout task}, will be cancelled
      * with the specified {@code timeoutCancellationReason} if the task is not completed on time
      */
-    @SuppressWarnings("unchecked")
-    private <V, C extends Callable<V> & CancellableTask<U>,
-            O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>,
-            T extends CancellableFuture<V, U> & Runnable>
-    T newTaskFor(C task, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
-        return (T) new TimeoutCancellableTask<>(task, timeout, timeoutCancellationReason, observerManager);
+    private <V, O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+    RunnableCancellableFuture<V, U> newTaskFor(CallableCancellableTask<V, U> task, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
+        return new TimeoutCancellableTask<>(task, timeout, timeoutCancellationReason, observerManager);
     }
 
     /**
@@ -169,20 +159,15 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param timeout                   the time available to execute the {@code task}
      * @param timeoutCancellationReason the timeout cancellation reason
      * @param <V>                       the type of the task's result
-     * @param <R>                       the type or the submitted runnable cancellable task
-     * @param <T>                       the {@link Runnable} that is {@link CancellableFuture}
      * @return a {@link  TimeoutCancellableTask} which, when run, will run the
      * underlying runnable and which, as a {@link CancellableFuture}, will yield
      * the given value as its result and provide for reasonable cancellation of
      * the underlying task and which, as a {@code timeout task}, will be cancelled
      * with the specified {@code timeoutCancellationReason} if the task is not completed on time
      */
-    @SuppressWarnings("unchecked")
-    private <V, R extends Runnable & CancellableTask<U>,
-            O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>,
-            T extends CancellableFuture<V, U> & Runnable>
-    T newTaskFor(R task, V result, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
-        return (T) new TimeoutCancellableTask<>(task, result, timeout, timeoutCancellationReason, observerManager);
+    private <V, O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+    RunnableCancellableFuture<V, U> newTaskFor(RunnableCancellableTask<U> task, V result, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
+        return new TimeoutCancellableTask<>(task, result, timeout, timeoutCancellationReason, observerManager);
     }
 
     /**
@@ -193,14 +178,10 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * if the task is not completed on time.
      *
      * @param <V> the result type returned by this CancellableFuture's {@code get} methods
-     * @param <C> the callable cancellable task
-     * @param <R> the runnable cancellable task
      */
     final class TimeoutCancellableTask<V,
-            C extends Callable<V> & CancellableTask<U>,
-            R extends Runnable & CancellableTask<U>,
             O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
-            extends ObservableCancellableFutureTask<V, U, C, R, O> {
+            extends ObservableCancellableFutureTask<V, U, O> {
         /**
          * The timeout in nanos.
          */
@@ -217,7 +198,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
          * @param timeout                   the timeout
          * @param timeoutCancellationReason the timeout cancellation reason
          */
-        TimeoutCancellableTask(final C cancellableCallable,
+        TimeoutCancellableTask(final CallableCancellableTask<V, U> cancellableCallable,
                                final Duration timeout, final U timeoutCancellationReason,
                                final O observerManager) {
             super(cancellableCallable, observerManager);
@@ -233,7 +214,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
          * @param timeout                   the timeout
          * @param timeoutCancellationReason the timeout cancellation reason
          */
-        TimeoutCancellableTask(final R cancellableRunnable, final V value,
+        TimeoutCancellableTask(final RunnableCancellableTask<U> cancellableRunnable, final V value,
                                final Duration timeout, final U timeoutCancellationReason,
                                final O observerManager) {
             super(cancellableRunnable, value, observerManager);
@@ -246,6 +227,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
          * If the task is finished on time, the cancellation task ought to
          * be declined.
          */
+        @Override
         protected void beforeExecute() {
             final var cancellationCommand = (Runnable) () -> {
                 if (Objects.nonNull(runningTaskToCancellationTaskMap.remove(this)))
@@ -258,6 +240,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
         /**
          * Declines the cancellation task associated with the running task since it was completed on time.
          */
+        @Override
         protected void afterExecute() {
             final var cancellationTask = runningTaskToCancellationTaskMap.remove(this);
             if (Objects.nonNull(cancellationTask)) cancellationTask.cancel(true);

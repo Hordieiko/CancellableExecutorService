@@ -3,23 +3,20 @@ package io.github.hordieiko.concurrent;
 import io.github.hordieiko.observer.Observable;
 import io.github.hordieiko.observer.ObserverManager;
 
-import java.util.concurrent.Callable;
-
-class ObservableCancellableFutureTask<V,
-        T extends CancellableTask.CancellationReason,
-        C extends Callable<V> & CancellableTask<T>,
-        R extends Runnable & CancellableTask<T>,
+sealed class ObservableCancellableFutureTask<V,
+        U extends CancellableTask.CancellationReason,
         O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
-        extends CancellableFutureTask<V, T, C, R>
-        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener> {
+        extends CancellableFutureTask<V, U>
+        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener>
+        permits CancellableTimeoutExecutorCompletionService.TimeoutCancellableTask {
     private final O observerManager;
 
-    ObservableCancellableFutureTask(final C callableCancellableTask, final O observerManager) {
+    ObservableCancellableFutureTask(final CallableCancellableTask<V, U> callableCancellableTask, final O observerManager) {
         super(callableCancellableTask);
         this.observerManager = observerManager;
     }
 
-    ObservableCancellableFutureTask(final R runnableCancellableTask, final V value, final O observerManager) {
+    ObservableCancellableFutureTask(final RunnableCancellableTask<U> runnableCancellableTask, final V value, final O observerManager) {
         super(runnableCancellableTask, value);
         this.observerManager = observerManager;
     }

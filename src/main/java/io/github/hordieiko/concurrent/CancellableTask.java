@@ -3,14 +3,14 @@ package io.github.hordieiko.concurrent;
 /**
  * Represents a task that can be cancelled.
  * <p>
- * Designed to use as a submitted task for {@link CancellableThreadPoolExecutor}.
+ * Designed to use as a submitted task for {@link CancellableThreadPoolExecutorService}.
  *
- * @param <T> the task cancellation reason type
- * @see CancellableThreadPoolExecutor
- * @see TimeoutThreadPoolExecutorService
+ * @param <U> the task cancellation reason type
+ * @see CancellableExecutor
+ * @see CancellableExecutorService
  */
 @FunctionalInterface
-public interface CancellableTask<T extends CancellableTask.CancellationReason> {
+public interface CancellableTask<U extends CancellableTask.CancellationReason> {
 
     /**
      * When an object implementing interface {@code CancellableTask} is used
@@ -22,14 +22,14 @@ public interface CancellableTask<T extends CancellableTask.CancellationReason> {
      * @see CancellableFutureTask#cancel(boolean)
      * @see CancellableFutureTask#cancel(boolean, CancellationReason)
      */
-    void cancel(T reason);
+    void cancel(U reason);
 
     /**
      * The State of the {@link CancellableTask}
      *
-     * @param <T> the task cancellation reason type
+     * @param <U> the task cancellation reason type
      */
-    interface State<T extends CancellableTask.CancellationReason> {
+    interface State<U extends CancellableTask.CancellationReason> {
         /**
          * Returns {@code true} if this task was cancelled before it completed
          * normally.
@@ -44,7 +44,7 @@ public interface CancellableTask<T extends CancellableTask.CancellationReason> {
          *
          * @return the cancellation reason
          */
-        T getCancellationReason();
+        U getCancellationReason();
     }
 
     /**
