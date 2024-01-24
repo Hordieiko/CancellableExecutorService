@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -38,7 +36,7 @@ import java.util.function.Supplier;
  */
 public class TimeoutThreadPoolExecutorService<U extends CancellableTask.CancellationReason>
         extends CancellableThreadPoolExecutorService<U>
-        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener> {
+        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener<U>> {
     /**
      * Time available to execute the task
      */
@@ -63,7 +61,8 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
     /**
      * The {@code EventManager} manages events to notify subscribed listeners about changes.
      */
-    private final EventManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener> eventManager = new EventManager<>();
+    private final EventManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>>
+            eventManager = new EventManager<>();
 
 
     /**
@@ -109,12 +108,10 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
      *
      * @param runningTaskThread the thread that will run task {@code runningTask}
      * @param runningTask       the task that will be executed
-     * @implNote Tasks that are supplied to the Executor Service will be
-     * wrapped in a RunnableFuture, except for tasks that are supplied
-     * directly via {@link Executor#execute} method. So, if the running
-     * task is a {@link Future}, it will be canceled using {@link Future#cancel},
-     * otherwise, the thread running the task will be interrupted to stop
-     * the running task after the available time has expired.
+     * @implNote Tasks that are supplied to the CancellableExecutorService will be
+     * wrapped in a RunnableCancellableFuture. So, the running task will be canceled
+     * using {@link CancellableFuture#cancel(boolean, CancellableTask.CancellationReason)},
+     * to stop execution after the available time has expired.
      * <p>If the task is finished on time, the cancellation task ought to
      * be declined.
      * <p>To track the running task and its cancellation task they are
@@ -124,17 +121,12 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
      * the task is processed.
      */
     @Override
-    protected final void beforeExecute(final Thread runningTaskThread, final Runnable runningTask) {
+    protected final void beforeExecute(final Thread runningTaskThread, final RunnableCancellableFuture<?, U> runningTask) {
         eventManager.notify(RunnableTaskListener.EventType.BEFORE_EXECUTE, runningTask);
 
         final var cancellationCommand = (Runnable) () -> {
-            if (runningTaskToCancellationTaskMap.remove(runningTask) != null) {
-                if (runningTask instanceof CancellableFuture) {
-                    @SuppressWarnings("unchecked") final var task = (CancellableFuture<?, U>) runningTask;
-                    task.cancel(true, timeoutCancellationReason);
-                } else if (runningTask instanceof Future) ((Future<?>) runningTask).cancel(true);
-                else runningTaskThread.interrupt();
-            }
+            if (runningTaskToCancellationTaskMap.remove(runningTask) != null)
+                runningTask.cancel(true, timeoutCancellationReason);
         };
         final var cancellationTask = scheduledExecutor.schedule(cancellationCommand, timeoutNanos, TimeUnit.NANOSECONDS);
         runningTaskToCancellationTaskMap.put(runningTask, cancellationTask);
@@ -150,7 +142,7 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
      * @implNote Since the task was completed, the cancellation task must be declined.
      */
     @Override
-    protected final void afterExecute(final Runnable runningTask, final Throwable t) {
+    protected final void afterExecute(final RunnableCancellableFuture<?, U> runningTask, final Throwable t) {
         final var cancellationTask = runningTaskToCancellationTaskMap.remove(runningTask);
         if (cancellationTask != null) cancellationTask.cancel(true);
 
@@ -164,7 +156,7 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
      * @param listener the listener for the specified event
      */
     @Override
-    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.subscribe(event, listener);
     }
 
@@ -175,7 +167,7 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
      * @param listener the listener for the specified event
      */
     @Override
-    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.unsubscribe(event, listener);
     }
 
@@ -265,13 +257,6 @@ public class TimeoutThreadPoolExecutorService<U extends CancellableTask.Cancella
             // mustn't affect the main executor shutdown.
         }
         return super.shutdownNow();
-    }
-
-    @FunctionalInterface
-    public interface RunnableTaskObserver extends Consumer<Runnable> {
-        enum Type {
-            BEFORE_EXECUTE, AFTER_EXECUTE
-        }
     }
 
     /**

@@ -6,7 +6,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -179,7 +178,7 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
      * @param t the thread that will run task {@code r}
      * @param r the task that will be executed
      */
-    protected void beforeExecute(final Thread t, final Runnable r) {
+    protected void beforeExecute(final Thread t, final RunnableCancellableFuture<?, U> r) {
         // for extension
     }
 
@@ -228,7 +227,7 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
      * @param r the runnable that has completed
      * @param t the exception that caused termination, or null if          execution completed normally
      */
-    protected void afterExecute(final Runnable r, final Throwable t) {
+    protected void afterExecute(final RunnableCancellableFuture<?, U> r, final Throwable t) {
         // for extension
     }
 
@@ -419,11 +418,14 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
          * @param r the task that will be executed
          * @implNote this implementation delegates the invocation
          * to the outer {@link CancellableThreadPoolExecutorService}
-         * to let subclasses override it.
+         * to let subclasses override it. Based on the general contract,
+         * the task for execution is created via the {@link #newTaskFor} method,
+         * so the given {@code Runnable} is a {@code RunnableCancellableFuture}.
          */
         @Override
         protected void beforeExecute(final Thread t, final Runnable r) {
-            CancellableThreadPoolExecutorService.this.beforeExecute(t, r);
+            @SuppressWarnings("unchecked") final var runnableCancellableFuture = (RunnableCancellableFuture<?, U>) r;
+            CancellableThreadPoolExecutorService.this.beforeExecute(t, runnableCancellableFuture);
         }
 
         /**
@@ -434,11 +436,14 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
          *          execution completed normally
          * @implNote this implementation delegates the invocation
          * to the outer {@link CancellableThreadPoolExecutorService}
-         * to let subclasses override it.
+         * to let subclasses override it. Based on the general contract,
+         * the task for execution is created via the {@link #newTaskFor} method,
+         * so the given {@code Runnable} is a {@code RunnableCancellableFuture}.
          */
         @Override
         protected void afterExecute(final Runnable r, final Throwable t) {
-            CancellableThreadPoolExecutorService.this.afterExecute(r, t);
+            @SuppressWarnings("unchecked") final var runnableCancellableFuture = (RunnableCancellableFuture<?, U>) r;
+            CancellableThreadPoolExecutorService.this.afterExecute(runnableCancellableFuture, t);
         }
 
         /**
@@ -452,7 +457,7 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
          * will be responsive to the custom cancellation.
          */
         @Override
-        protected <V> RunnableFuture<V> newTaskFor(final Callable<V> callable) {
+        protected <V> RunnableCancellableFuture<V, U> newTaskFor(final Callable<V> callable) {
             final var callableCancellableTask = (CallableCancellableTask<V, U>) callable;
             return decorateNewTaskFor(callable, new CancellableFutureTask<>(callableCancellableTask));
         }
@@ -469,7 +474,7 @@ public class CancellableThreadPoolExecutorService<U extends CancellableTask.Canc
          * will be responsive to the custom cancellation.
          */
         @Override
-        protected <V> RunnableFuture<V> newTaskFor(final Runnable runnable, final V value) {
+        protected <V> RunnableCancellableFuture<V, U> newTaskFor(final Runnable runnable, final V value) {
             @SuppressWarnings("unchecked") final var runnableCancellableTask = (RunnableCancellableTask<U>) runnable;
             return decorateNewTaskFor(runnable, value, new CancellableFutureTask<>(runnableCancellableTask, value));
         }

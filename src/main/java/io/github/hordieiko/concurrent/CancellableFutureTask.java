@@ -46,6 +46,9 @@ sealed class CancellableFutureTask<V, U extends CancellableTask.CancellationReas
         return super.cancel(mayInterruptIfRunning);
     }
 
+    @Override
+    public CancellableTask<U> getCancellableTask() {return cancellableTask;}
+
     private void cancelTask(final U reason) {
         try {
             cancellableTask.cancel(reason);

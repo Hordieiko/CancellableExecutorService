@@ -34,4 +34,6 @@ public interface CancellableFuture<V, U extends CancellableTask.CancellationReas
      * may provide stronger guarantees.
      */
     boolean cancel(boolean mayInterruptIfRunning, U reason);
+
+    CancellableTask<U> getCancellableTask();
 }

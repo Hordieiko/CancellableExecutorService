@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * @param <U> the cancellation reason type
  */
 public class CancellableTimeoutExecutorCompletionService<U extends CancellableTask.CancellationReason>
-        implements CancellableTimeoutCompletionService<U>, Observable<RunnableTaskListener.EventType, RunnableTaskListener> {
+        implements CancellableTimeoutCompletionService<U>, Observable<RunnableTaskListener.EventType, RunnableTaskListener<U>> {
     /**
      * The executor to execute a cancellable task with timeout.
      */
@@ -49,7 +49,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
     /**
      * The {@code EventManager} manages events to notify subscribed listeners about changes.
      */
-    private final ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener> eventManager;
+    private final ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>> eventManager;
 
     /**
      * Instantiates a new {@code CancellableTimeoutExecutorCompletionService} service.
@@ -85,7 +85,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param listener the listener for the specified event
      */
     @Override
-    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.subscribe(event, listener);
     }
 
@@ -96,7 +96,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param listener the listener for the specified event
      */
     @Override
-    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.unsubscribe(event, listener);
     }
 
@@ -146,7 +146,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * the underlying task and which, as a {@code timeout task}, will be cancelled
      * with the specified {@code timeoutCancellationReason} if the task is not completed on time
      */
-    private <V, O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+    private <V, O extends ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>>>
     RunnableCancellableFuture<V, U> newTaskFor(CallableCancellableTask<V, U> task, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
         return new TimeoutCancellableTask<>(task, timeout, timeoutCancellationReason, observerManager);
     }
@@ -165,7 +165,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * the underlying task and which, as a {@code timeout task}, will be cancelled
      * with the specified {@code timeoutCancellationReason} if the task is not completed on time
      */
-    private <V, O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+    private <V, O extends ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>>>
     RunnableCancellableFuture<V, U> newTaskFor(RunnableCancellableTask<U> task, V result, final Duration timeout, final U timeoutCancellationReason, final O observerManager) {
         return new TimeoutCancellableTask<>(task, result, timeout, timeoutCancellationReason, observerManager);
     }
@@ -180,7 +180,7 @@ public class CancellableTimeoutExecutorCompletionService<U extends CancellableTa
      * @param <V> the result type returned by this CancellableFuture's {@code get} methods
      */
     final class TimeoutCancellableTask<V,
-            O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+            O extends ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>>>
             extends ObservableCancellableFutureTask<V, U, O> {
         /**
          * The timeout in nanos.

@@ -48,12 +48,7 @@ public final class EventManager<T, V, L extends Consumer<V>> implements Observer
      */
     @Override
     public void subscribe(final T event, final L listener) {
-        listenersMap.compute(event,
-                (t, listeners) -> {
-                    if (listeners == null) listeners = listenersCollectionSupplier.get();
-                    listeners.add(listener);
-                    return listeners;
-                });
+        listenersMap.computeIfAbsent(event, _ -> listenersCollectionSupplier.get()).add(listener);
     }
 
     /**

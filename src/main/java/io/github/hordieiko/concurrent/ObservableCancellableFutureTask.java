@@ -5,9 +5,9 @@ import io.github.hordieiko.observer.ObserverManager;
 
 sealed class ObservableCancellableFutureTask<V,
         U extends CancellableTask.CancellationReason,
-        O extends ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener>>
+        O extends ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>>>
         extends CancellableFutureTask<V, U>
-        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener>
+        implements Observable<RunnableTaskListener.EventType, RunnableTaskListener<U>>
         permits CancellableTimeoutExecutorCompletionService.TimeoutCancellableTask {
     private final O observerManager;
 
@@ -49,12 +49,12 @@ sealed class ObservableCancellableFutureTask<V,
     }
 
     @Override
-    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         observerManager.subscribe(event, listener);
     }
 
     @Override
-    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         observerManager.unsubscribe(event, listener);
     }
 }

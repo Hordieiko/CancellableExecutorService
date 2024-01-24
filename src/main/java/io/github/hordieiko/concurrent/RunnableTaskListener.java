@@ -6,7 +6,7 @@ import java.util.function.Consumer;
  * Runnable task listener.
  */
 @FunctionalInterface
-public interface RunnableTaskListener extends Consumer<Runnable> {
+public interface RunnableTaskListener<U extends CancellableTask.CancellationReason> extends Consumer<RunnableCancellableFuture<?, U>> {
     /**
      * Defines the types of events that listeners can be subscribed to.
      */

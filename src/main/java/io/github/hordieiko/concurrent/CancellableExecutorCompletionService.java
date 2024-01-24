@@ -22,7 +22,7 @@ import java.util.concurrent.Executor;
  * @param <U> the cancellation reason type
  */
 public class CancellableExecutorCompletionService<U extends CancellableTask.CancellationReason>
-        implements CancellableExecutor<U>, Observable<RunnableTaskListener.EventType, RunnableTaskListener> {
+        implements CancellableExecutor<U>, Observable<RunnableTaskListener.EventType, RunnableTaskListener<U>> {
     /**
      * The executor to execute a cancellable task with timeout.
      */
@@ -30,7 +30,7 @@ public class CancellableExecutorCompletionService<U extends CancellableTask.Canc
     /**
      * The {@code EventManager} manages events to notify subscribed listeners about changes.
      */
-    private final ObserverManager<RunnableTaskListener.EventType, Runnable, RunnableTaskListener> eventManager;
+    private final ObserverManager<RunnableTaskListener.EventType, RunnableCancellableFuture<?, U>, RunnableTaskListener<U>> eventManager;
 
     /**
      * Instantiates a new {@code CancellableTimeoutExecutorCompletionService} service.
@@ -120,7 +120,7 @@ public class CancellableExecutorCompletionService<U extends CancellableTask.Canc
      * @param listener the listener for the specified event
      */
     @Override
-    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void subscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.subscribe(event, listener);
     }
 
@@ -131,7 +131,7 @@ public class CancellableExecutorCompletionService<U extends CancellableTask.Canc
      * @param listener the listener for the specified event
      */
     @Override
-    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener listener) {
+    public void unsubscribe(final RunnableTaskListener.EventType event, final RunnableTaskListener<U> listener) {
         eventManager.unsubscribe(event, listener);
     }
 }
